@@ -6,7 +6,7 @@ namespace GoogleSheetImport
     internal class ServiceLine
     {
         public string ServiceLineName { get; set; }
-        private List<string> Keywords { get; set; }
+        public List<string> Keywords { get; set; }
 
         public ServiceLine()
         {

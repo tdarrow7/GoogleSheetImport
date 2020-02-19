@@ -1,11 +1,12 @@
 ﻿using Google.Apis.Auth.OAuth2;
 using Google.Apis.Sheets.v4;
 using System;
+using System.Configuration;
+using System.Data;
+using System.Data.SqlClient;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GoogleSheetImport
 {
@@ -27,6 +28,7 @@ namespace GoogleSheetImport
         /// </summary>
         internal void Run()
         {
+        
             GoogleCredential credential;
             // read credentials from file
             using (var stream = new FileStream("client-secrets.json", FileMode.Open, FileAccess.Read))
@@ -43,10 +45,14 @@ namespace GoogleSheetImport
             });
 
             // begin process of reading entries from Google Sheets
-            ReadEntries();
+            readEntries();
+
+            insertEntriesIntoDatabase();
         }
 
-        internal void ReadEntries()
+        
+
+        private void readEntries()
         {
             var range = $"{sheet}";  // specified range will encapsulate all fields with data on specified Google Sheet (as dictated by name of sheet)
             var request = service.Spreadsheets.Values.Get(SpreadsheetId, range);  // request to get values from spreadsheet (based off of spreadsheetID and range)
@@ -88,6 +94,45 @@ namespace GoogleSheetImport
                 serviceLines.Add(serviceLine);
             }
         }
+        
+        /// <summary>
+        /// insert found entries into specific table using connection string from App.config
+        /// </summary>
+        internal void insertEntriesIntoDatabase()
+        {
+            var connectionString = ConfigurationManager.ConnectionStrings["ServerLocal"].ConnectionString;
+            var table = new DataTable();
+            string sqlTableDestination = "TestDB.dbo.Temp_HCServiceLineKeywords";
+            using (var adapter = new SqlDataAdapter($"SELECT TOP 0 * FROM {sqlTableDestination}", connectionString))
+            {
+                adapter.Fill(table);
+            };
 
+            foreach (var serviceLine in serviceLines)
+            {
+                foreach (var keyword in serviceLine.Keywords)
+                {
+                    var row = table.NewRow();
+                    row["ServiceLine"] = serviceLine.ServiceLineName;
+                    row["Keyword"] = keyword;
+                    row["ProjectID"] = projectID;
+                    table.Rows.Add(row);
+                }
+            }
+
+            using (SqlBulkCopy bulkCopy = new SqlBulkCopy(connectionString))
+            {
+                bulkCopy.DestinationTableName = sqlTableDestination;
+                try
+                {
+                    bulkCopy.WriteToServer(table);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    throw;
+                }
+            }
+        }
     }
 }
