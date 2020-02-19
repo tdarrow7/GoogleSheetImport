@@ -15,17 +15,15 @@ namespace GoogleSheetImport
 {
     class Program
     {
-        
-
-        
-
-
+        /// <summary>
+        /// simply start the program
+        /// </summary>
+        /// <param name="args"></param>
         static void Main(string[] args)
         {
+            // most of the information about the import is inside the GoogleSheetReader class
             GoogleSheetReader sheetReader = new GoogleSheetReader();
             sheetReader.Run();
-
         }
-
     }
 }
