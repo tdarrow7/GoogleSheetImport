@@ -7,6 +7,7 @@ using System.Data.SqlClient;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Dapper;
 
 namespace GoogleSheetImport
 {
@@ -100,7 +101,7 @@ namespace GoogleSheetImport
         /// </summary>
         internal void insertEntriesIntoDatabase()
         {
-            var connectionString = ConfigurationManager.ConnectionStrings["ServerLocal"].ConnectionString;
+            var connectionString = ConfigurationManager.ConnectionStrings["Default"].ConnectionString;
             var table = new DataTable();
             string sqlTableDestination = "TestDB.dbo.Temp_HCServiceLineKeywords";
             using (var adapter = new SqlDataAdapter($"SELECT TOP 0 * FROM {sqlTableDestination}", connectionString))
@@ -132,6 +133,12 @@ namespace GoogleSheetImport
                     Console.WriteLine(ex.Message);
                     throw;
                 }
+            }
+
+            using (var connection = new SqlConnection(connectionString))
+            {
+                string sql = "EXEC TestDB.dbo.s_ImportServiceLineKeywords";
+                var affectedRows = connection.Execute(sql);
             }
         }
     }
